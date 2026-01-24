@@ -1,0 +1,15 @@
+# pkcs11-autopin configuration
+#
+# PINs are stored in /etc/pkcs11-autopin.pins/<token_label>
+# Example: for token "My TPM Token", create:
+#   echo "mypin123" > /etc/pkcs11-autopin.pins/My_TPM_Token
+#   chmod 600 /etc/pkcs11-autopin.pins/My_TPM_Token
+
+# Enable debug logging
+debug: false
+
+# Path to the backend PKCS#11 library
+backend: /usr/lib64/pkcs11/libtpm2_pkcs11.so.0.0.0
+
+# Optional: custom pins directory
+# pins_dir: /etc/pkcs11-autopin.pins
