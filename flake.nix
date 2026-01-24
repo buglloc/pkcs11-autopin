@@ -113,13 +113,12 @@
           };
 
           config = lib.mkIf cfg.enable {
-            environment.etc."pkcs11-autopin.yaml".text = ''
-              debug: ${lib.boolToString cfg.debug}
-              backend: ${cfg.backend}
-            '';
-
-            # Create PIN files (keyed by sanitized token label)
-            environment.etc = lib.mapAttrs' (name: value: {
+            environment.etc = {
+              "pkcs11-autopin.yaml".text = ''
+                debug: ${lib.boolToString cfg.debug}
+                backend: ${cfg.backend}
+              '';
+            } // lib.mapAttrs' (name: value: {
               name = "pkcs11-autopin.pins/${name}";
               value = {
                 text = value;
