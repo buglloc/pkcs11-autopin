@@ -132,15 +132,15 @@ impl Backend {
         };
 
         if rv != CKR_OK || info.is_null() {
+            self.slot_to_label.write().remove(&slot_id);
             return rv;
         }
 
         // Extract label and check if we have a PIN for it
         let label = Self::extract_token_label(unsafe { &*info });
         debug!("Called get_token_info(): {}", label);
-        if self.config.get_pin_for_label(&label).is_some() {
+        if self.cache_slot_label_if_pin_exists(slot_id, &label).is_some() {
             debug!("Found PIN for slot {} (token '{}')", slot_id, label);
-            self.slot_to_label.write().insert(slot_id, label);
             // Clear protected authentication path flag so the app will call Login
             unsafe {
                 (*info).flags &= !CKF_PROTECTED_AUTHENTICATION_PATH;
@@ -172,9 +172,9 @@ impl Backend {
             return rv;
         }
 
-        // Auto-login if we have a PIN for this slot
-        if let Some(label) = self.slot_to_label.read().get(&slot_id) {
-            if let Some(pin) = self.config.get_pin_for_label(label) {
+        // Auto-login if we have a PIN for the token currently present in this slot.
+        if let Some(label) = self.current_slot_label_with_pin(slot_id) {
+            if let Some(pin) = self.config.get_pin_for_label(&label) {
                 debug!("Auto-login for slot {} (token '{}')", slot_id, label);
                 let session_handle = unsafe { *session };
                 let login_rv = self.login(
@@ -190,6 +190,38 @@ impl Backend {
         }
 
         rv
+    }
+
+    fn current_slot_label_with_pin(&self, slot_id: CK_SLOT_ID) -> Option<String> {
+        let get_token_info = match self.funcs().C_GetTokenInfo {
+            Some(f) => f,
+            None => {
+                self.slot_to_label.write().remove(&slot_id);
+                return None;
+            }
+        };
+
+        let mut info = std::mem::MaybeUninit::<CK_TOKEN_INFO>::uninit();
+        let rv = unsafe { get_token_info(slot_id, info.as_mut_ptr()) };
+        if rv != CKR_OK {
+            self.slot_to_label.write().remove(&slot_id);
+            return None;
+        }
+
+        let info = unsafe { info.assume_init_ref() };
+        let label = Self::extract_token_label(info);
+        self.cache_slot_label_if_pin_exists(slot_id, &label)
+            .map(|_| label)
+    }
+
+    fn cache_slot_label_if_pin_exists(&self, slot_id: CK_SLOT_ID, label: &str) -> Option<String> {
+        let pin = self.config.get_pin_for_label(label);
+        if pin.is_some() {
+            self.slot_to_label.write().insert(slot_id, label.to_string());
+        } else {
+            self.slot_to_label.write().remove(&slot_id);
+        }
+        pin
     }
 
     fn extract_token_label(info: &CK_TOKEN_INFO) -> String {
