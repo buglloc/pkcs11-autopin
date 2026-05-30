@@ -32,7 +32,7 @@ impl Config {
 
         let config_file: ConfigFile = if filepath.exists() {
             let content = fs::read_to_string(filepath)?;
-            serde_yaml::from_str(&content)?
+            noyalib::from_str(&content)?
         } else {
             ConfigFile {
                 debug: false,
