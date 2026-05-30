@@ -7,12 +7,14 @@ mod pkcs11_types;
 use backend::Backend;
 use config::Config;
 use log::{debug, error, info};
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
+use parking_lot::Mutex;
 use pkcs11_types::*;
 use std::panic::{self, AssertUnwindSafe};
 
 /// Global backend instance
 static BACKEND: OnceCell<Backend> = OnceCell::new();
+static INITIALIZED: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
 
 /// Initialize logging
 fn init_logging(debug: bool) {
@@ -41,6 +43,10 @@ fn init_logging(debug: bool) {
 
 /// Get the backend, initializing if necessary
 fn get_backend() -> Result<&'static Backend, CK_RV> {
+    if !*INITIALIZED.lock() {
+        return Err(CKR_CRYPTOKI_NOT_INITIALIZED);
+    }
+
     BACKEND.get().ok_or(CKR_CRYPTOKI_NOT_INITIALIZED)
 }
 
@@ -111,13 +117,44 @@ pub extern "C" fn C_Initialize(pInitArgs: CK_VOID_PTR) -> CK_RV {
     });
 
     match result {
-        Ok(backend) => wrap_call("C_Initialize", || backend.initialize(pInitArgs)),
+        Ok(backend) => wrap_call("C_Initialize", || {
+            let mut initialized = INITIALIZED.lock();
+            if *initialized {
+                return CKR_CRYPTOKI_ALREADY_INITIALIZED;
+            }
+
+            let rv = backend.initialize(pInitArgs);
+            if rv == CKR_OK {
+                *initialized = true;
+            }
+            rv
+        }),
         Err(rv) => rv,
     }
 }
 
 // General purpose functions
-proxy_fn!(C_Finalize, finalize, pReserved: CK_VOID_PTR);
+#[no_mangle]
+pub extern "C" fn C_Finalize(pReserved: CK_VOID_PTR) -> CK_RV {
+    wrap_call("C_Finalize", || {
+        let backend = match BACKEND.get() {
+            Some(backend) => backend,
+            None => return CKR_CRYPTOKI_NOT_INITIALIZED,
+        };
+
+        let mut initialized = INITIALIZED.lock();
+        if !*initialized {
+            return CKR_CRYPTOKI_NOT_INITIALIZED;
+        }
+
+        let rv = backend.finalize(pReserved);
+        if rv == CKR_OK {
+            *initialized = false;
+        }
+        rv
+    })
+}
+
 proxy_fn!(C_GetInfo, get_info, pInfo: CK_INFO_PTR);
 
 // Slot and token management
