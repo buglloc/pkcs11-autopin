@@ -1,7 +1,7 @@
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use zeroize::Zeroizing;
 
 const DEFAULT_BACKEND: &str = "/usr/lib64/pkcs11/libtpm2_pkcs11.so.0.0.0";
 const DEFAULT_CONFIG_PATH: &str = "/etc/pkcs11-autopin.yaml";
@@ -20,7 +20,6 @@ pub struct Config {
     pub debug: bool,
     pub backend_path: String,
     pins_dir: PathBuf,
-    pin_cache: parking_lot::RwLock<HashMap<String, Option<String>>>,
 }
 
 impl Config {
@@ -46,40 +45,23 @@ impl Config {
             debug: config_file.debug,
             backend_path: config_file.backend.unwrap_or_else(|| DEFAULT_BACKEND.to_string()),
             pins_dir: PathBuf::from(config_file.pins_dir.unwrap_or_else(|| DEFAULT_PINS_DIR.to_string())),
-            pin_cache: parking_lot::RwLock::new(HashMap::new()),
         })
     }
 
 
-    pub fn get_pin_for_label(&self, label: &str) -> Option<String> {
+    pub fn get_pin_for_label(&self, label: &str) -> Option<Zeroizing<Vec<u8>>> {
         let token_label = Self::sanitize_label(label);
-
-        {
-            let cache = self.pin_cache.read();
-            if let Some(cached) = cache.get(&token_label) {
-                return cached.clone();
-            }
-        }
-
-        let pin = self.read_pin_file(&token_label);
-
-        {
-            let mut cache = self.pin_cache.write();
-            cache.insert(token_label, pin.clone());
-        }
-
-        pin
+        self.read_pin_file(&token_label)
     }
 
-    fn read_pin_file(&self, token_label: &str) -> Option<String> {
+    fn read_pin_file(&self, token_label: &str) -> Option<Zeroizing<Vec<u8>>> {
         let pin_path = self.pins_dir.join(token_label);
-        let pin = fs::read_to_string(&pin_path).ok()?;
-        let pin = pin.trim().to_string();
+        let pin = fs::read(&pin_path).ok()?;
 
         if pin.is_empty() {
             None
         } else {
-            Some(pin)
+            Some(Zeroizing::new(pin))
         }
     }
 
@@ -102,7 +84,6 @@ impl Default for Config {
             debug: false,
             backend_path: DEFAULT_BACKEND.to_string(),
             pins_dir: PathBuf::from(DEFAULT_PINS_DIR),
-            pin_cache: parking_lot::RwLock::new(HashMap::new()),
         }
     }
 }

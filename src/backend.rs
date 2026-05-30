@@ -174,13 +174,13 @@ impl Backend {
 
         // Auto-login if we have a PIN for the token currently present in this slot.
         if let Some(label) = self.current_slot_label_with_pin(slot_id) {
-            if let Some(pin) = self.config.get_pin_for_label(&label) {
+            if let Some(mut pin) = self.config.get_pin_for_label(&label) {
                 debug!("Auto-login for slot {} (token '{}')", slot_id, label);
                 let session_handle = unsafe { *session };
                 let login_rv = self.login(
                     session_handle,
                     CKU_USER,
-                    pin.as_ptr() as CK_UTF8CHAR_PTR,
+                    pin.as_mut_ptr(),
                     pin.len() as CK_ULONG,
                 );
                 if login_rv != CKR_OK && login_rv != CKR_USER_ALREADY_LOGGED_IN {
@@ -214,7 +214,11 @@ impl Backend {
             .map(|_| label)
     }
 
-    fn cache_slot_label_if_pin_exists(&self, slot_id: CK_SLOT_ID, label: &str) -> Option<String> {
+    fn cache_slot_label_if_pin_exists(
+        &self,
+        slot_id: CK_SLOT_ID,
+        label: &str,
+    ) -> Option<zeroize::Zeroizing<Vec<u8>>> {
         let pin = self.config.get_pin_for_label(label);
         if pin.is_some() {
             self.slot_to_label.write().insert(slot_id, label.to_string());
