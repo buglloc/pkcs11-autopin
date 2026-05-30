@@ -159,6 +159,10 @@ impl Backend {
         notify: CK_NOTIFY,
         session: CK_SESSION_HANDLE_PTR,
     ) -> CK_RV {
+        if session.is_null() {
+            return CKR_ARGUMENTS_BAD;
+        }
+
         let rv = match self.funcs().C_OpenSession {
             Some(f) => unsafe { f(slot_id, flags, application, notify, session) },
             None => return CKR_FUNCTION_NOT_SUPPORTED,
