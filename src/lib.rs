@@ -249,7 +249,10 @@ proxy_fn!(C_WaitForSlotEvent, wait_for_slot_event, flags: CK_FLAGS, pSlot: CK_SL
 
 /// Static function list for C_GetFunctionList
 static mut FUNCTION_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
-    version: CK_VERSION { major: 2, minor: 40 },
+    version: CK_VERSION {
+        major: 2,
+        minor: 40,
+    },
     C_Initialize: Some(C_Initialize),
     C_Finalize: Some(C_Finalize),
     C_GetInfo: Some(C_GetInfo),
@@ -320,6 +323,12 @@ static mut FUNCTION_LIST: CK_FUNCTION_LIST = CK_FUNCTION_LIST {
     C_WaitForSlotEvent: Some(C_WaitForSlotEvent),
 };
 
+/// Returns the proxy's PKCS#11 function table.
+///
+/// # Safety
+///
+/// If non-null, `ppFunctionList` must be valid and aligned for writing one
+/// [`CK_FUNCTION_LIST_PTR`].
 #[no_mangle]
 pub unsafe extern "C" fn C_GetFunctionList(ppFunctionList: CK_FUNCTION_LIST_PTR_PTR) -> CK_RV {
     if ppFunctionList.is_null() {

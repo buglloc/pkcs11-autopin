@@ -284,8 +284,11 @@ pub type CK_C_InitToken = unsafe extern "C" fn(
     ulPinLen: CK_ULONG,
     pLabel: CK_UTF8CHAR_PTR,
 ) -> CK_RV;
-pub type CK_C_InitPIN =
-    unsafe extern "C" fn(hSession: CK_SESSION_HANDLE, pPin: CK_UTF8CHAR_PTR, ulPinLen: CK_ULONG) -> CK_RV;
+pub type CK_C_InitPIN = unsafe extern "C" fn(
+    hSession: CK_SESSION_HANDLE,
+    pPin: CK_UTF8CHAR_PTR,
+    ulPinLen: CK_ULONG,
+) -> CK_RV;
 pub type CK_C_SetPIN = unsafe extern "C" fn(
     hSession: CK_SESSION_HANDLE,
     pOldPin: CK_UTF8CHAR_PTR,
@@ -424,8 +427,11 @@ pub type CK_C_Digest = unsafe extern "C" fn(
     pDigest: CK_BYTE_PTR,
     pulDigestLen: CK_ULONG_PTR,
 ) -> CK_RV;
-pub type CK_C_DigestUpdate =
-    unsafe extern "C" fn(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) -> CK_RV;
+pub type CK_C_DigestUpdate = unsafe extern "C" fn(
+    hSession: CK_SESSION_HANDLE,
+    pPart: CK_BYTE_PTR,
+    ulPartLen: CK_ULONG,
+) -> CK_RV;
 pub type CK_C_DigestKey =
     unsafe extern "C" fn(hSession: CK_SESSION_HANDLE, hKey: CK_OBJECT_HANDLE) -> CK_RV;
 pub type CK_C_DigestFinal = unsafe extern "C" fn(
@@ -445,8 +451,11 @@ pub type CK_C_Sign = unsafe extern "C" fn(
     pSignature: CK_BYTE_PTR,
     pulSignatureLen: CK_ULONG_PTR,
 ) -> CK_RV;
-pub type CK_C_SignUpdate =
-    unsafe extern "C" fn(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) -> CK_RV;
+pub type CK_C_SignUpdate = unsafe extern "C" fn(
+    hSession: CK_SESSION_HANDLE,
+    pPart: CK_BYTE_PTR,
+    ulPartLen: CK_ULONG,
+) -> CK_RV;
 pub type CK_C_SignFinal = unsafe extern "C" fn(
     hSession: CK_SESSION_HANDLE,
     pSignature: CK_BYTE_PTR,
@@ -476,8 +485,11 @@ pub type CK_C_Verify = unsafe extern "C" fn(
     pSignature: CK_BYTE_PTR,
     ulSignatureLen: CK_ULONG,
 ) -> CK_RV;
-pub type CK_C_VerifyUpdate =
-    unsafe extern "C" fn(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) -> CK_RV;
+pub type CK_C_VerifyUpdate = unsafe extern "C" fn(
+    hSession: CK_SESSION_HANDLE,
+    pPart: CK_BYTE_PTR,
+    ulPartLen: CK_ULONG,
+) -> CK_RV;
 pub type CK_C_VerifyFinal = unsafe extern "C" fn(
     hSession: CK_SESSION_HANDLE,
     pSignature: CK_BYTE_PTR,
@@ -566,8 +578,11 @@ pub type CK_C_DeriveKey = unsafe extern "C" fn(
     ulAttributeCount: CK_ULONG,
     phKey: CK_OBJECT_HANDLE_PTR,
 ) -> CK_RV;
-pub type CK_C_SeedRandom =
-    unsafe extern "C" fn(hSession: CK_SESSION_HANDLE, pSeed: CK_BYTE_PTR, ulSeedLen: CK_ULONG) -> CK_RV;
+pub type CK_C_SeedRandom = unsafe extern "C" fn(
+    hSession: CK_SESSION_HANDLE,
+    pSeed: CK_BYTE_PTR,
+    ulSeedLen: CK_ULONG,
+) -> CK_RV;
 pub type CK_C_GenerateRandom = unsafe extern "C" fn(
     hSession: CK_SESSION_HANDLE,
     pRandomData: CK_BYTE_PTR,
@@ -659,4 +674,3 @@ pub type CK_FUNCTION_LIST_PTR_PTR = *mut CK_FUNCTION_LIST_PTR;
 // Type for C_GetFunctionList
 pub type CK_C_GetFunctionList =
     unsafe extern "C" fn(ppFunctionList: CK_FUNCTION_LIST_PTR_PTR) -> CK_RV;
-

@@ -43,11 +43,16 @@ impl Config {
 
         Ok(Config {
             debug: config_file.debug,
-            backend_path: config_file.backend.unwrap_or_else(|| DEFAULT_BACKEND.to_string()),
-            pins_dir: PathBuf::from(config_file.pins_dir.unwrap_or_else(|| DEFAULT_PINS_DIR.to_string())),
+            backend_path: config_file
+                .backend
+                .unwrap_or_else(|| DEFAULT_BACKEND.to_string()),
+            pins_dir: PathBuf::from(
+                config_file
+                    .pins_dir
+                    .unwrap_or_else(|| DEFAULT_PINS_DIR.to_string()),
+            ),
         })
     }
-
 
     pub fn get_pin_for_label(&self, label: &str) -> Option<Zeroizing<Vec<u8>>> {
         let token_label = Self::sanitize_label(label);
@@ -56,13 +61,20 @@ impl Config {
 
     fn read_pin_file(&self, token_label: &str) -> Option<Zeroizing<Vec<u8>>> {
         let pin_path = self.pins_dir.join(token_label);
-        let pin = fs::read(&pin_path).ok()?;
+        let mut pin = Zeroizing::new(fs::read(&pin_path).ok()?);
+        Self::trim_ascii_whitespace(&mut pin);
 
         if pin.is_empty() {
             None
         } else {
-            Some(Zeroizing::new(pin))
+            Some(pin)
         }
+    }
+
+    fn trim_ascii_whitespace(pin: &mut Vec<u8>) {
+        let leading = pin.len() - pin.trim_ascii_start().len();
+        pin.drain(..leading);
+        pin.truncate(pin.trim_ascii_end().len());
     }
 
     fn sanitize_label(s: &str) -> String {
