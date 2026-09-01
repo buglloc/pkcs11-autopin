@@ -54,7 +54,6 @@
             homepage = "https://github.com/buglloc/pkcs11-autopin";
             license = licenses.mit;
             platforms = platforms.linux;
-            mainProgram = null; # This is a library, not a program
           };
         };
       in

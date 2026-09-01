@@ -18,6 +18,8 @@ unsafe impl Sync for Backend {}
 
 macro_rules! proxy_method {
     ($name:ident, $field:ident $(, $arg:ident : $ty:ty)*) => {
+        // PKCS#11 signatures are fixed by the ABI.
+        #[allow(clippy::too_many_arguments)]
         pub fn $name(&self, $($arg: $ty),*) -> CK_RV {
             match self.funcs().$field {
                 Some(f) => unsafe { f($($arg),*) },
@@ -123,7 +125,6 @@ impl Backend {
     proxy_method!(cancel_function, C_CancelFunction, session: CK_SESSION_HANDLE);
     proxy_method!(wait_for_slot_event, C_WaitForSlotEvent, flags: CK_FLAGS, slot: CK_SLOT_ID_PTR, reserved: CK_VOID_PTR);
 
-
     /// Get token info and map slot to label for auto-login
     pub fn get_token_info(&self, slot_id: CK_SLOT_ID, info: CK_TOKEN_INFO_PTR) -> CK_RV {
         let rv = match self.funcs().C_GetTokenInfo {
@@ -139,7 +140,10 @@ impl Backend {
         // Extract label and check if we have a PIN for it
         let label = Self::extract_token_label(unsafe { &*info });
         debug!("Called get_token_info(): {}", label);
-        if self.cache_slot_label_if_pin_exists(slot_id, &label).is_some() {
+        if self
+            .cache_slot_label_if_pin_exists(slot_id, &label)
+            .is_some()
+        {
             debug!("Found PIN for slot {} (token '{}')", slot_id, label);
             // Clear protected authentication path flag so the app will call Login
             unsafe {
@@ -221,7 +225,9 @@ impl Backend {
     ) -> Option<zeroize::Zeroizing<Vec<u8>>> {
         let pin = self.config.get_pin_for_label(label);
         if pin.is_some() {
-            self.slot_to_label.write().insert(slot_id, label.to_string());
+            self.slot_to_label
+                .write()
+                .insert(slot_id, label.to_string());
         } else {
             self.slot_to_label.write().remove(&slot_id);
         }
